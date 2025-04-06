@@ -13,7 +13,9 @@ class Sentinel(nn.Module):
         self.backbone: Backbone = Backbone.from_pretrained(config.backbone.name)
         self.config = config
     
-    def forward(self, corpus_ids: Tensor, corpus_mask: Tensor, label_ids: Optional[Tensor] = None, selectedDataset: Tuple[str] = ('Human', 'ChatGPT', 'PaLM', 'LLaMA', 'GPT2')) -> SentinelOutput:
+    def forward(self, corpus_ids: Tensor, corpus_mask: Tensor, label_ids: Optional[Tensor] = None, 
+                selectedDataset: Tuple[str] = ('Human', 'Gemini', 'GPT', 'Deepseek', 'Llama', 
+                                           'Gemini + Human', 'GPT + Human', 'Deepseek + Human', 'Llama + Human')) -> SentinelOutput:
         '''
         Args:
             corpus_ids (Tensor): The input corpus ids.
@@ -22,36 +24,7 @@ class Sentinel(nn.Module):
 
         Returns:
             output (SentinelOutput): The output of the model.
-        
-        Example:
-        >>> model = Sentinel()
-        >>> model.eval()
-        >>> with torch.no_grad():
-        >>>     corpus_ids, corpus_mask, label_ids = next(iter(train_loader))
-        >>>     model.forward(corpus_ids.cuda(), corpus_mask.cuda(), label_ids.cuda())
-        huggingface=Seq2SeqLMOutput(
-            loss=..., 
-            logits=..., 
-            past_key_values=..., 
-            decoder_hidden_states=..., 
-            decoder_attentions=..., 
-            cross_attentions=..., 
-            encoder_last_hidden_state=..., 
-            encoder_hidden_states=..., 
-            encoder_attentions=...
-        ),
-        probabilities=tensor([
-            [1.0000e+00, 2.5421e-07, 1.8315e-07, 4.8886e-07],
-            [1.0000e+00, 5.2608e-07, 1.0334e-06, 9.4020e-07],
-            [9.9997e-01, 5.3097e-06, 8.8986e-06, 1.4712e-05],
-            [9.9999e-01, 2.4895e-06, 1.7681e-06, 5.8721e-06],
-            [9.9999e-01, 1.3558e-06, 1.1293e-06, 2.8045e-06],
-            [1.0000e+00, 3.5004e-07, 3.6059e-07, 8.7667e-07],
-            [9.9997e-01, 5.6359e-06, 7.8194e-06, 1.4346e-05],
-            [9.9995e-01, 1.1463e-05, 1.2729e-05, 2.9505e-05]
-        ], device='cuda:0')
         '''
-
         filteredDataset = [item for item in config.dataset if item.label in selectedDataset]
         
         if self.training:
@@ -79,7 +52,9 @@ class Sentinel(nn.Module):
         
         return SentinelOutput.construct(huggingface=outputs, probabilities=probabilities)
 
-    def interpretability_study_entry(self, corpus_ids: Tensor, corpus_mask: Tensor, label_ids: Tensor, selectedDataset: Tuple[str] = ('Human', 'ChatGPT', 'PaLM', 'LLaMA', 'GPT2')):
+    def interpretability_study_entry(self, corpus_ids: Tensor, corpus_mask: Tensor, label_ids: Tensor, 
+                                    selectedDataset: Tuple[str] = ('Human', 'Gemini', 'GPT', 'Deepseek', 'Llama', 
+                                                               'Gemini + Human', 'GPT + Human', 'Deepseek + Human', 'Llama + Human')):
         assert self.injected_embedder is not None, "Injected gradient collector did not found"
 
         filteredDataset = [item for item in config.dataset if item.label in selectedDataset]
@@ -91,7 +66,7 @@ class Sentinel(nn.Module):
             output_attentions=False
         )
         raw_scores = outputs.logits
-        loss       = outputs.loss
+        loss = outputs.loss
         loss.backward()
 
         filtered_scores = raw_scores[:, 0, [item.token_id for item in filteredDataset]]
