@@ -25,17 +25,15 @@ class Dataset(utils.data.Dataset):
         for item in filteredDataset:
             with open(f'{item.root}/{partition}.jsonl', 'r') as f:
                 for line in f:
-                    data = json.loads(line)
-                    
+                    # Special handling for Llama models (both pure and hybrid)
                     if 'Llama' in item.label:
-                        # Special handling for Llama and Llama + Human
-                        words = data['text'].split()
+                        words = json.loads(line)['text'].split()
                         continuation = words[75:]
                         if len(continuation) >= 42:
                             self.corpus.append(' '.join(continuation[:256]))
                             self.label.append(item.token)
                     else:
-                        self.corpus.append(data['text'])
+                        self.corpus.append(json.loads(line)['text'])
                         self.label.append(item.token)
                     
         self.tokenizer: Tokenizer = Tokenizer.from_pretrained(config.backbone.name, model_max_length=config.backbone.model_max_length)
