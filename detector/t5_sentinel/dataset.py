@@ -15,7 +15,9 @@ class Dataset(utils.data.Dataset):
         label (list[str]): The labels of the dataset.
         tokenizer (Tokenizer): The tokenizer used.
     '''
-    def __init__(self, partition: str, selectedDataset: Tuple[str] = ('Human', 'ChatGPT', 'PaLM', 'LLaMA')):
+    def __init__(self, partition: str, selectedDataset: Tuple[str] = (
+            'Human', 'Gemini', 'GPT', 'Deepseek', 'Llama', 
+            'Gemini + Human', 'GPT + Human', 'Deepseek + Human', 'Llama + Human')):
         super().__init__()
         
         self.corpus, self.label = [], []
@@ -23,15 +25,17 @@ class Dataset(utils.data.Dataset):
         for item in filteredDataset:
             with open(f'{item.root}/{partition}.jsonl', 'r') as f:
                 for line in f:
-
-                    if item.label == 'LLaMA':
-                        words = json.loads(line)['text'].split()
+                    data = json.loads(line)
+                    
+                    if 'Llama' in item.label:
+                        # Special handling for Llama and Llama + Human
+                        words = data['text'].split()
                         continuation = words[75:]
                         if len(continuation) >= 42:
                             self.corpus.append(' '.join(continuation[:256]))
                             self.label.append(item.token)
                     else:
-                        self.corpus.append(json.loads(line)['text'])
+                        self.corpus.append(data['text'])
                         self.label.append(item.token)
                     
         self.tokenizer: Tokenizer = Tokenizer.from_pretrained(config.backbone.name, model_max_length=config.backbone.model_max_length)
